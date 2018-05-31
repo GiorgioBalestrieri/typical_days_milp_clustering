@@ -1,0 +1,10 @@
+.ipynb_checkpoints/
+/**/.ipynb_checkpoints/
+__pycache__/
+/**/__pycache__/
+results/*
+!results/.placeholder
+tmp*.nl
+tmp*.log
+tmp*.lp
+tmp*.sol
