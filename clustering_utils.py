@@ -33,3 +33,10 @@ def get_pyomo_input_dictionary(data_dict, namespace=None):
             data_dict[k] = {None:v}
     
     return {namespace:data_dict}
+
+def extract_results(model_instance):
+    
+    y = pd.Series(model_instance.y.get_values())
+    z = pd.Series(model_instance.z.get_values()).unstack()
+    
+    return y,z

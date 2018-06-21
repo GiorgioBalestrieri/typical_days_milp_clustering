@@ -33,19 +33,19 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
     #===================================
     
     m.n_days = pe.Param(
-        within=pe.PositiveIntegers,
-        doc='''Number of days.'''
+        within = pe.PositiveIntegers,
+        doc = '''Number of days.'''
     )
     
     m.n_clusters = pe.Param(
-        within=pe.PositiveIntegers,
-        doc='''Number of clusters.'''
+        within = pe.PositiveIntegers,
+        doc = '''Number of clusters.'''
     )
     
     m.n_extreme_days = pe.Param(
-        within=pe.NonNegativeIntegers,
-        initialize=0,
-        doc='''Number of extreme days.'''
+        within = pe.NonNegativeIntegers,
+        initialize = 0,
+        doc = '''Number of extreme days.'''
     )
     
     #====================================#
@@ -55,8 +55,8 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
     m.Days = pe.RangeSet(m.n_days)
     
     m.Days_cross = pe.Set(
-        initialize=m.Days*m.Days,
-        doc=''''''
+        initialize = m.Days*m.Days,
+        doc = '''Auxiliary Set. Cross-set between Days and Days.'''
     )
     
     m.Properties = pe.Set(doc='''Properties considered''')
@@ -69,18 +69,19 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
     
     m.x_daily_tot = pe.Param(
         m.Properties, m.Days,
-        doc='''Total value of each property on each day.'''
+        doc = '''Total value of each property on each day.'''
     )
     
     m.x_daily_max = pe.Param(
         m.Properties, m.Days,
-        mutable=True, # used to prevent errors in constraints
+        mutable = True, # used to prevent errors in constraints
+        doc = '''Max value of each property on each day.'''
     )
     
     m.x_max = pe.Param(
         m.Properties,
         mutable = True, # used to prevent errors in constraints
-        doc = '''Maximum overall values of each property.'''
+        doc = '''Max overall values of each property.'''
     )
     
     def _x_total(m, p):
@@ -88,8 +89,8 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
     
     m.x_total = pe.Param(
         m.Properties,
-        initialize=_x_total,
-        doc='''Total value of each property.'''
+        initialize = _x_total,
+        doc = '''Total value of each property.'''
     )
     
     m.rel_tol = pe.Param(
@@ -117,7 +118,7 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
     m.y = pe.Var(
         m.Days, 
         within = pe.Binary,
-        initialize=0,
+        initialize = 0,
         doc = '''1 iff object i is chosen as representative 
         of its cluster.'''
     )
@@ -155,7 +156,7 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
     
     def _chosen(m,i):
         '''Auxiliary. 1 iff day i is either typical or extreme.'''
-        return m.y[i] + (1 - sum(m.z[i,j] for j in m.Days)) 
+        return m.y[i] + (1 - sum(m.z[j,i] for j in m.Days)) 
     
     m.chosen = pe.Expression(
         m.Days,
@@ -165,7 +166,7 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
     m.w = pe.Var(
         m.Properties, m.Days,
         within = pe.Binary,
-        doc='''Binary, used to impose that at least one chosen days 
+        doc = '''Binary, used to impose that at least one chosen days 
         has a peak larger than a given proportion of the real peak.'''
     )
     
@@ -187,7 +188,7 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
     m.each_non_extreme_day_is_represented = pe.Constraint(
         m.Days,
         rule = _each_non_extreme_day_is_represented,
-        doc='''each day is represented by exactly 1 day 
+        doc = '''each day is represented by exactly 1 day 
         (without EDs)'''
     )
     
@@ -220,8 +221,8 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
         
     m.relative_error_upper = pe.Constraint(
         m.Properties,
-        rule=_relative_error_upper,
-        doc=''''''
+        rule = _relative_error_upper,
+        doc = ''''''
     )
     
     def _relative_error_lower(m, p):
@@ -230,18 +231,18 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
         
     m.relative_error_lower = pe.Constraint(
         m.Properties,
-        rule=_relative_error_lower,
-        doc=''''''
+        rule = _relative_error_lower,
+        doc = ''''''
     )
     
     def _preserve_peak(m, p, i):
-        return m.x_daily_max[p,i] * m.chosen[i] - m.w[p,i] * m.min_peak_share[p] * m.x_max[p] >= 0
+        return m.x_daily_max[p,i] * m.chosen[i] >= m.w[p,i] * m.min_peak_share[p] * m.x_max[p]
     
     m.preserve_peak = pe.Constraint(
         m.Properties,
         m.Days,
-        rule=_preserve_peak,
-        doc='''The day must be chosen and its max value
+        rule = _preserve_peak,
+        doc = '''The day must be chosen and its max value
         must be larger than the overall peak.
         '''
     )
@@ -256,6 +257,15 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
         satisfy preserve_peak.'''
     )
     
+    def _represent_itself(m,i):
+        return m.z[i,i] >= m.y[i]
+    
+    m.represent_itself = pe.Constraint(
+        m.Days,
+        rule = _represent_itself,
+        doc = '''Auxiliary. Prevents the model from cheating.'''
+    )
+    
     
     #====================================#
     #           Objective Function
@@ -265,8 +275,8 @@ def create_model(preserve_total_values=False, preserve_peak_values=False):
         return sum(m.distance[ij]*m.z[ij] for ij in m.Days_cross)
     
     m.minimize_total_distance = pe.Objective(
-        rule=_total_distance,
-        doc='''Mininimize total distance between days 
+        rule = _total_distance,
+        doc = '''Mininimize total distance between days 
         of the same cluster.'''        
     )
     
